@@ -54,13 +54,13 @@ func run(dir, find, replace, ignoredirs, textExtensions string, caseSensitive bo
 	var err error
 
 	// do directories first. then we won't have to worry about stuff moving
-	err = renameDirs(dir, replace, reg, ignores)
+	newpath, err := renameDirs(dir, replace, reg, ignores)
 
 	if err != nil {
 		return err
 	}
 
-	err = replaceContents(dir, replace, reg, extMap, ignores)
+	err = replaceContents(newpath, replace, reg, extMap, ignores)
 
 	return err
 }
@@ -79,17 +79,17 @@ type WriteOp struct {
 	Contents []byte
 }
 
-func renameDirs(dir, replace string, reg *regexp.Regexp, ignoreMap map[string]bool) error {
+func renameDirs(dir, replace string, reg *regexp.Regexp, ignoreMap map[string]bool) (string, error) {
 	renames := []RenameOp{} // do a list so they're processed in the correct order
 
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		matches := reg.FindAllStringSubmatch(info.Name(), -1)
 		lname := strings.ToLower(info.Name())
 
 		if _, ok := ignoreMap[lname]; ok && info.IsDir() {
 			return filepath.SkipDir
 		}
 
+		matches := reg.FindAllStringSubmatch(info.Name(), -1)
 		if len(matches) == 0 {
 			return nil
 		}
@@ -97,34 +97,27 @@ func renameDirs(dir, replace string, reg *regexp.Regexp, ignoreMap map[string]bo
 		curdir := filepath.Dir(path)
 		s := matches[0][1]
 
-		// get relative from start, we don't want to rename anything above this.
-		relpath := strings.Replace(curdir, dir, "", -1)
-
-		// replace path instances
-		newpath := strings.Replace(relpath, s, replace, -1)
-
-		// replace last instance (current filename or folder name)
 		newthisname := strings.Replace(info.Name(), s, replace, -1)
-
-		// specify 'new' old path
-		old := filepath.Join(dir, newpath, info.Name())
-
-		// specify new full path
-		renameTo := filepath.Join(dir, newpath, newthisname)
-
-		renames = append(renames, RenameOp{Old: old, New: renameTo})
+		renameTo := filepath.Join(curdir, newthisname)
+		renames = append(renames, RenameOp{ Old: path, New: renameTo })
 
 		return nil
 	})
 
-	for _, value := range renames {
+	for i := len(renames)-1; i >= 0; i-- {
+		value := renames[i]
 		err := os.Rename(value.Old, value.New)
 		if err != nil {
-			return fmt.Errorf("Couldn't rename %v to %v, %s", value.Old, value.New, err)
+			return dir, fmt.Errorf("Couldn't rename %v to %v, %s", value.Old, value.New, err)
 		}
 	}
 
-	return nil
+	newpath := dir
+	if len(renames) > 0 && renames[0].Old == dir {
+		newpath = renames[0].New
+	}
+
+	return newpath, nil
 }
 
 func replaceContents(dir, replace string, reg *regexp.Regexp, extMap, ignoreMap map[string]bool) error {
