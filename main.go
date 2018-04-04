@@ -99,12 +99,12 @@ func renameDirs(dir, replace string, reg *regexp.Regexp, ignoreMap map[string]bo
 
 		newthisname := strings.Replace(info.Name(), s, replace, -1)
 		renameTo := filepath.Join(curdir, newthisname)
-		renames = append(renames, RenameOp{ Old: path, New: renameTo })
+		renames = append(renames, RenameOp{Old: path, New: renameTo})
 
 		return nil
 	})
 
-	for i := len(renames)-1; i >= 0; i-- {
+	for i := len(renames) - 1; i >= 0; i-- {
 		value := renames[i]
 		err := os.Rename(value.Old, value.New)
 		if err != nil {
