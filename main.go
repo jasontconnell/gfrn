@@ -45,7 +45,10 @@ func main() {
 }
 
 func run(dir, find, replace, ignoredirs, textExtensions string, caseSensitive bool) error {
-	p := strings.Replace(find, ".", "\\.", -1)
+	var p string
+	p = strings.Replace(find, `\`, `\\`, -1)
+	p = strings.Replace(p, ".", "\\.", -1)
+
 	pattern := "(?i:.*(" + strings.ToLower(p) + ").*)"
 	reg := regexp.MustCompile(pattern)
 	ignores := splitToMap(strings.ToLower(ignoredirs), ",", "")
@@ -83,6 +86,11 @@ func renameDirs(dir, replace string, reg *regexp.Regexp, ignoreMap map[string]bo
 	renames := []RenameOp{} // do a list so they're processed in the correct order
 
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
 		lname := strings.ToLower(info.Name())
 
 		if _, ok := ignoreMap[lname]; ok && info.IsDir() {
@@ -124,6 +132,11 @@ func replaceContents(dir, replace string, reg *regexp.Regexp, extMap, ignoreMap 
 	readPaths := []string{}
 
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
 		lname := strings.ToLower(info.Name())
 
 		if _, ok := ignoreMap[lname]; ok && info.IsDir() {
