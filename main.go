@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -204,7 +203,7 @@ func read(list []string) []ReadOp {
 		if path == "" {
 			continue
 		}
-		bytes, err := ioutil.ReadFile(path)
+		bytes, err := os.ReadFile(path)
 		if err != nil {
 			fmt.Println("Got error reading file", path)
 			continue
@@ -292,7 +291,7 @@ func write(list []WriteOp) {
 			fmt.Println("Couldn't remove path", wr.Path, err)
 		}
 
-		err = ioutil.WriteFile(wr.Path, wr.Contents, os.ModePerm)
+		err = os.WriteFile(wr.Path, wr.Contents, os.ModePerm)
 		if err != nil {
 			fmt.Println("Got error writing file", wr.Path, err)
 		}
